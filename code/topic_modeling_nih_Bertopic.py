@@ -192,9 +192,23 @@ barchart_visualization = topic_model.visualize_barchart()
 heatmap = topic_model.visualize_heatmap()
 
 # Save visualizations to PNG files
-topic_visualization.write_image("/Users/shicuiran/PycharmProjects/NIH_network/topic_model/topic_visualization.png")
-barchart_visualization.write_image("/Users/shicuiran/PycharmProjects/NIH_network/topic_model/barchart_visualization.png")
-heatmap.write_image("/Users/shicuiran/PycharmProjects/NIH_network/topic_model/heatmap.png")
+topic_visualization.write_image(
+    "/Users/shicuiran/PycharmProjects/NIH_network/topic_model/topic_visualization.png",
+    engine="kaleido",
+    scale=4   # increases DPI without changing layout proportions
+)
+
+barchart_visualization.write_image(
+    "/Users/shicuiran/PycharmProjects/NIH_network/topic_model/barchart_visualization.png",
+    engine="kaleido",
+    scale=4
+)
+
+heatmap.write_image(
+    "/Users/shicuiran/PycharmProjects/NIH_network/topic_model/heatmap.png",
+    engine="kaleido",
+    scale=4
+)
 
 # Count the unique topics
 unique_topics = np.unique(topics)
@@ -230,9 +244,12 @@ for i, topic_trace in enumerate(barchart_visualization.data):
     topic_trace.marker.color = distinct_colors[i % len(distinct_colors)]
 
 # Save the visualization to a PNG file
-barchart_visualization.write_image("/Users/shicuiran/PycharmProjects/NIH_network/topic_model/barchart_visualization_full1.png")
 
-
+barchart_visualization.write_image(
+    "/Users/shicuiran/PycharmProjects/NIH_network/topic_model/barchart_visualization_full.png",
+    engine="kaleido",
+    scale=4
+)
 
 ## Genrate 1 topic and specify color
 import matplotlib.pyplot as plt
@@ -323,70 +340,13 @@ for i in range(19):  # Looping through clusters 0 to 18
 """
 Donut Plots: Topic Distribution for Each Community
 """
-import matplotlib.pyplot as plt
-import pandas as pd
-import plotly.express as px
-from itertools import cycle
-
-# Replace this with your actual data retrieval line
-topic_counts4 = topic_results[4]['topic_counts']  # both cluster and topic start from 0
-
-# Filter out the '-1' topic if it exists
-if -1 in topic_counts4:
-    filtered_topic_counts = topic_counts4.drop(-1)
-else:
-    filtered_topic_counts = topic_counts4
-
-# Use Plotly's Dark24 qualitative color palette
-distinct_colors = px.colors.qualitative.Dark24
-color_cycle = cycle(distinct_colors)  # Create a cycling iterator over the colors
-
-# Map each unique topic to a color
-topic_colors = {topic: next(color_cycle) for topic in sorted(set(filtered_topic_counts.index))}
-
-# Use the topic_colors to assign colors to the topics in filtered_topic_counts
-plot_colors = [topic_colors[topic] for topic in filtered_topic_counts.index]
-
-# Create a donut plot
-fig, ax = plt.subplots(figsize=(10, 8))  # Increase the figure size
-wedges, texts, autotexts = ax.pie(
-    filtered_topic_counts,
-    labels=filtered_topic_counts.index,
-    autopct='%1.1f%%',
-    startangle=90,
-    colors=plot_colors,  # Use mapped colors
-    pctdistance=0.85,
-    wedgeprops=dict(width=0.3)
-)
-
-# Customize text size and color
-plt.setp(texts, size=8, weight="bold")
-plt.setp(autotexts, size=8, color="white")
-
-# Draw a circle at the center of the pie to make it look like a donut
-centre_circle = plt.Circle((0, 0), 0.70, fc='white')
-fig.gca().add_artist(centre_circle)
-
-# Equal aspect ratio ensures that pie is drawn as a circle
-ax.axis('equal')
-
-plt.title('Topic Distribution in Cluster 4', fontsize=14)
-
-# Save the plot as a PNG file
-plt.savefig('/Users/shicuiran/PycharmProjects/NIH_network/topic_model/Topic_Distribution_Donut_Plot_cluster4.png',
-            bbox_inches='tight',
-            dpi=300)  # Added higher DPI for better quality
-
-
-
 
 # Write donut plots in a loop
 import matplotlib.pyplot as plt
-import pandas as pd
 import plotly.express as px
-from itertools import cycle
 import os
 import numpy as np
+import textwrap
 
 # Create output directory if it doesn't exist
 output_dir = '/Users/shicuiran/PycharmProjects/NIH_network/topic_model/cluster_plots'
@@ -395,7 +355,52 @@ os.makedirs(output_dir, exist_ok=True)
 # Use Plotly's Dark24 qualitative color palette
 distinct_colors = px.colors.qualitative.Dark24
 
-# Process each cluster result
+# ---- Topic summary mapping ----
+topic_summaries = {
+    0: "Healthcare and Outcomes Research",
+    1: "Cellular Biology and Functions",
+    2: "Cardiovascular and Cognitive Health",
+    3: "Neuroscience and Brain Disorders",
+    4: "Cancer Immunotherapy",
+    5: "Genomics and Genetic Variation",
+    6: "Molecular and Cellular Biology",
+    7: "Neurology and Pain Management",
+    8: "Microbiome Research",
+    9: "Medical Imaging Technologies",
+    10: "Virology: HIV and Viral Infections",
+    11: "Pharmacology and Drug Development",
+    12: "Alzheimer’s Disease and Neurodegenerative Disease",
+    13: "Infectious Disease in Developing Regions",
+    14: "Vaccines and Immune Response",
+    15: "Bone Health and Cancer",
+    16: "Ophthalmology and Vision Sciences",
+    17: "Liver Diseases and Hepatic Function",
+    18: "Cellular Damage and DNA Repair",
+    19: "Sensory Biology and Ion Channels"
+}
+
+# ---- Build ONE global topic-color mapping ----
+all_topics = set()
+for result in topic_results:
+    topic_counts = result['topic_counts']
+    valid_topics = [topic for topic in topic_counts.index if topic != -1]
+    all_topics.update(valid_topics)
+
+all_topics = sorted(all_topics)
+
+if len(all_topics) > len(distinct_colors):
+    raise ValueError(
+        f"There are {len(all_topics)} topics but only {len(distinct_colors)} colors in Dark24. "
+        "You need a larger color palette."
+    )
+
+topic_colors = {topic: distinct_colors[i] for i, topic in enumerate(all_topics)}
+
+print("Global topic-color mapping:")
+for topic, color in topic_colors.items():
+    print(f"Topic {topic}: {color}")
+
+# ---- Process each cluster result ----
 for result in topic_results:
     cluster_num = result['cluster']
     topic_counts = result['topic_counts']
@@ -403,77 +408,130 @@ for result in topic_results:
     print(f"\nProcessing Cluster {cluster_num}:")
     print(f"Topic counts before filtering:\n{topic_counts}")
 
-    # Filter out the '-1' topic if it exists
+    # Filter out topic -1
     if -1 in topic_counts.index:
-        filtered_topic_counts = topic_counts.drop(-1)
+        filtered_topic_counts = topic_counts.drop(-1).copy()
     else:
         filtered_topic_counts = topic_counts.copy()
 
-    # Skip clusters with no valid topics
+    # Skip empty clusters
     if len(filtered_topic_counts) == 0:
         print(f"Skipping cluster {cluster_num} - no valid topics after filtering")
         continue
 
     print(f"Topic counts after filtering:\n{filtered_topic_counts}")
 
-    # Calculate percentages
+    # Keep original order for plotting
+    topic_index = list(filtered_topic_counts.index)
+
+    # Percentages
     percentages = (filtered_topic_counts / filtered_topic_counts.sum()) * 100
 
-    # Create color cycle and map topics to colors
-    color_cycle = cycle(distinct_colors)
-    topic_colors = {topic: next(color_cycle) for topic in sorted(filtered_topic_counts.index)}
-    plot_colors = [topic_colors[topic] for topic in filtered_topic_counts.index]
+    # Top 3 topics by count
+    top3_topics = filtered_topic_counts.sort_values(ascending=False).head(3)
 
-    # Create figure
+    # Colors using global mapping
+    plot_colors = [topic_colors[topic] for topic in topic_index]
+
+    # Create figure with fixed size
     fig, ax = plt.subplots(figsize=(12, 10))
 
-    # Create donut plot - hide labels for small percentages (<5%)
+    # Draw donut WITHOUT outer labels so pie size stays consistent
     wedges, texts, autotexts = ax.pie(
-        filtered_topic_counts,
-        labels=[f"Topic {topic}" if percentages[topic] >= 5 else "" for topic in filtered_topic_counts.index],
-        autopct=lambda pct: f"{pct:.1f}%\n({int(pct / 100 * filtered_topic_counts.sum())})" if pct >= 5 else "",
+        filtered_topic_counts.values,
+        labels=None,
+        autopct=lambda pct: (
+            f"{pct:.1f}%\n({int(round(pct / 100 * filtered_topic_counts.sum()))})"
+            if pct >= 5 else ""
+        ),
         startangle=90,
         colors=plot_colors,
         pctdistance=0.80,
+        radius=1.0,
         wedgeprops=dict(width=0.4, edgecolor='white', linewidth=1),
-        textprops={'fontsize': 9}
+        textprops={'fontsize': 15}
     )
 
-    # Customize text - only for visible labels
-    for text, percentage in zip(texts, percentages):
-        if percentage >= 5:
-            text.set_size(16)
-            text.set_weight("bold")
-        else:
-            text.set_text("")  # Ensure empty labels are truly empty
-
+    # Customize inside percentage labels
     for autotext, percentage in zip(autotexts, percentages):
         if percentage >= 5:
-            autotext.set_size(14)
+            autotext.set_size(20)
             autotext.set_color("white")
             autotext.set_weight("bold")
         else:
-            autotext.set_text("")  # Hide small percentage labels
+            autotext.set_text("")
 
     # Add center circle to make it a donut
     centre_circle = plt.Circle((0, 0), 0.60, fc='white')
     ax.add_artist(centre_circle)
-    ax.axis('equal')
 
-    # Add title and adjust layout
-    plt.title(f'Topic Distribution in Cluster {cluster_num}\n(Total Projects: {filtered_topic_counts.sum()})',
-              fontsize=20, pad=20)
-    plt.tight_layout()
+    # ---- Add manual labels for top 3 topics ----
+    for topic, value in top3_topics.items():
+        summary = topic_summaries.get(topic, "Unknown Topic")
+        label = f"Topic {topic}: {summary}"
+
+        # Wrap long label to multiple lines
+        label = "\n".join(textwrap.wrap(label, width=32))
+
+        # Locate the corresponding wedge
+        wedge_idx = topic_index.index(topic)
+        wedge = wedges[wedge_idx]
+
+        # Mid-angle of wedge
+        angle = (wedge.theta1 + wedge.theta2) / 2
+        angle_rad = np.deg2rad(angle)
+
+        # Start of leader line
+        x0 = 1.02 * np.cos(angle_rad)
+        y0 = 1.02 * np.sin(angle_rad)
+
+        # End of leader line / text anchor
+        x1 = 1.35 * np.cos(angle_rad)
+        y1 = 1.35 * np.sin(angle_rad)
+
+        # ---- manual adjustment only for Cluster 15 ----
+        if cluster_num == 15:
+            if topic == 2:
+                y1 += 0.22   # move Topic 2 upward
+            if topic == 7:
+                y1 -= 0.22   # move Topic 7 downward
+
+        # Draw leader line
+        ax.plot([x0, x1], [y0, y1], color='gray', linewidth=1)
+
+        # Align text depending on side
+        ha = 'left' if x1 >= 0 else 'right'
+
+        ax.text(
+            x1,
+            y1,
+            label,
+            ha=ha,
+            va='center',
+            fontsize=30,
+            fontweight='bold'
+        )
+
+    # Keep aspect ratio and fixed limits so donut sizes stay the same
+    ax.set_aspect('equal')
+    ax.set_xlim(-1.75, 1.75)
+    ax.set_ylim(-1.55, 1.55)
+
+    # Title
+    plt.title(
+        f'Topic Distribution in Cluster {cluster_num}\n(Total Projects: {filtered_topic_counts.sum()})',
+        fontsize=30,
+        pad=18
+    )
 
     # Save plot
     output_path = os.path.join(output_dir, f'Cluster_{cluster_num}_Topic_Distribution.png')
     plt.savefig(output_path, bbox_inches='tight', dpi=300, facecolor='white')
-    plt.close()  # Close the figure to free memory
+    plt.close()
 
     print(f"Successfully saved plot for cluster {cluster_num} at {output_path}")
 
 print("\nAll cluster plots generated successfully!")
-
 
 
 
@@ -493,8 +551,7 @@ for topic, count in sorted(topic_counts_full.items()):
 project_text_full['topics'] = topics_full
 doc_counts_full = project_text_full.groupby('Full Fiscal DateTime').size()
 
-import pandas as pd
-import matplotlib.pyplot as plt
+
 from plotly.colors import qualitative
 
 # Filter out -1 topics
@@ -546,35 +603,106 @@ for group_name, topic_range in topic_groups.items():
     # Save each plot
     plt.savefig(f"time_visualization_{group_name}.png", dpi=300, bbox_inches='tight')
 
+
 # ================================
 # Plot Only Selected Topics
 # ================================
-selected_topics = [0, 2, 6, 12]
+
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import pandas as pd
+from plotly.colors import qualitative
+
+selected_topics = [0, 1, 2, 6, 12]
+
+# Topic summaries (for better legend)
+topic_summaries = {
+    0: "Healthcare and Outcomes Research",
+    1: "Cellular Biology and Functions",
+    2: "Cardiovascular and Cognitive Health",
+    6: "Molecular and Cellular Biology",
+    12: "Alzheimer’s & Neurodegeneration"
+}
+
+# Start from 2009-01-01
+topic_counts_normalized_plot = topic_counts_normalized.loc[
+    topic_counts_normalized.index >= pd.Timestamp("2009-01-01")
+].copy()
 
 # Filter for selected topics
-topic_counts_selected = topic_counts_normalized[selected_topics]
+topic_counts_selected = topic_counts_normalized_plot[selected_topics]
 
 # Use Dark24 color palette
 colors = qualitative.Dark24
 
-# Plot
+# Define line styles
+line_styles = {
+    0: 'solid',
+    2: 'solid',
+    12: 'solid',
+    1: 'dashed',
+    6: 'dashed'
+}
+
+# Create figure
 plt.figure(figsize=(14, 6))
+
+# Plot lines
 for topic in selected_topics:
     if topic in topic_counts_selected.columns:
-        plt.plot(topic_counts_selected.index,
-                 topic_counts_selected[topic],
-                 label=f"Topic {topic}",
-                 color=colors[topic],
-                 linewidth=2)
+        plt.plot(
+            topic_counts_selected.index,
+            topic_counts_selected[topic],
+            label=f"Topic {topic}: {topic_summaries.get(topic, '')}",
+            color=colors[topic],
+            linewidth=2.5 if line_styles.get(topic) == 'solid' else 2,
+            linestyle=line_styles.get(topic, 'solid'),
+            alpha=0.9
+        )
 
-plt.title("Normalized Frequencies for Selected Topics (0, 1, 2, 6, 12)", fontsize=20, weight='bold')
-plt.xlabel("Year", fontsize=16)
-plt.ylabel("Normalized Frequency", fontsize=16)
-plt.grid(True, alpha=0.3)
-plt.xticks(rotation=45, fontsize=14)
-plt.yticks(fontsize=14)
+# Axis formatting
+ax = plt.gca()
+ax.xaxis.set_major_locator(mdates.YearLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+
+# Add top space for legend
+ymax = topic_counts_selected.max().max()
+ax.set_ylim(0, ymax * 1.3)
+
+# Labels and title
+plt.title("Temporal Trends in Selected Research Topics",
+          fontsize=18, weight='bold')
+plt.xlabel("Year", fontsize=14)
+plt.ylabel("Proportion of Projects", fontsize=14)
+
+# Grid
+plt.grid(True, alpha=0.2)
+
+# Tick styling
+plt.xticks(rotation=45, fontsize=12)
+plt.yticks(fontsize=12)
+
+# ================================
+# Legend
+# ================================
+plt.legend(
+    title="Topic",
+    title_fontsize=13,
+    fontsize=11,
+    loc='upper left',
+    bbox_to_anchor=(0.10, 0.98),
+    frameon=True,
+    facecolor='white',
+    edgecolor='gray',
+    framealpha=0.9
+)
+
+# Layout
 plt.tight_layout()
-plt.legend(title="Topic", title_fontsize=16, fontsize=14, bbox_to_anchor=(1.05, 1), loc='upper left')
 
-# Save the figure
-plt.savefig("time_visualization_selected_topics.png", dpi=300, bbox_inches='tight')
+# Save figure
+plt.savefig(
+    "time_visualization_selected_topics.png",
+    dpi=300,
+    bbox_inches='tight'
+)

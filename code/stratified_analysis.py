@@ -8,6 +8,11 @@ import matplotlib.colors  # Ensure this is included
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from scipy.stats import zscore
+from community_detection import expanded_combined_df
+from topic_modeling_nih_Bertopic import model
+from topic_modeling_nih_Bertopic import topic_model
+from topic_modeling_nih_Bertopic import preprocess_text
+
 
 # Load the adjacency matrix data
 data1 = pd.read_csv('/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/10year_2006-2015/adjacent_matrix_largest_component_2006-2015.csv')
@@ -571,3 +576,50 @@ fig.update_layout(
 )
 
 fig.write_image("sankey_diagram.png", width=1600, height=1200, scale=2)
+
+
+
+
+
+# --------------------------------------------------
+# Combine two figures together
+# --------------------------------------------------
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+img1 = mpimg.imread("time_visualization_selected_topics.png")
+img2 = mpimg.imread("sankey_diagram.png")
+
+
+fig, axes = plt.subplots(
+    2, 1,
+    figsize=(12, 14),
+    gridspec_kw={'height_ratios': [1, 1.4]}
+)
+
+
+# Panel (a)
+
+axes[0].imshow(img1)
+axes[0].axis("off")
+
+
+# Panel (b)
+
+axes[1].imshow(img2)
+axes[1].axis("off")
+
+
+fig.text(0.065, 0.965, "(a)", fontsize=14, fontweight="bold")
+fig.text(0.065, 0.55, "(b)", fontsize=14, fontweight="bold")
+
+
+plt.subplots_adjust(
+    left=0.05,
+    right=0.98,
+    top=0.98,
+    bottom=0.03,
+    hspace=0.08
+)
+
+
+plt.savefig("time_visualization_sankey_diagram.png", dpi=300, bbox_inches="tight")
