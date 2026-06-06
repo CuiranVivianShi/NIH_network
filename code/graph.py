@@ -38,7 +38,7 @@ edges_df = pd.DataFrame(edges, columns=["source", "target"])
 
 edges_df.to_csv("edges.csv", index=False)
 nodes_df.to_csv("nodes.csv", index=False)
-adj_matrix.to_csv("adjacent.csv", index=True)
+adj_matrix.to_csv("adjacency_matrix.csv", index=True)
 
 # ---- Largest connected component (LCC) ----
 A = adj_matrix.to_numpy()
@@ -74,4 +74,4 @@ for start, end in edges_lcc_named:
     adj_matrix_lcc.loc[start, end] += 1
     adj_matrix_lcc.loc[end, start] += 1
 
-adj_matrix_lcc.to_csv("adjacent_matrix_largest_component.csv", index=True)
+adj_matrix_lcc.to_csv("adjacency_matrix_largest_component.csv", index=True)
