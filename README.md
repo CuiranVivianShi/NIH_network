@@ -9,7 +9,7 @@ https://huggingface.co/datasets/LiLabUNC/NIH-MPINet
 
 Raw datasets are located in the `data/` folder, including:
 - NIH RePORTER exported datasets
-- adjacency matrix, node list, and edge list for the largest connected component
+- adjacency matrix, node list, and edge list for the full data and the largest connected component
 
 ## Code description
 
