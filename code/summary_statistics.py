@@ -29,7 +29,7 @@ comma_fmt = FuncFormatter(lambda x, _: f"{int(x):,}")
 # ============================================================
 # 1) Load and prepare data
 # ============================================================
-combined_df = pd.read_csv("combined_df_updated.csv", low_memory=False)
+combined_df = pd.read_csv("combined_df.csv", low_memory=False)
 all_unique_pis = pd.read_csv("data/nodes.csv")
 
 # One row per unique project
