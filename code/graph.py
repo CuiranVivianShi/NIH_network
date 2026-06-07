@@ -8,6 +8,7 @@ combined_df = get_combined_df()
 all_unique_pis = get_unique_pis()
 nodes = list(all_unique_pis)
 
+
 def process_pi_names(pi_str):
     if pd.isna(pi_str):
         return []
@@ -24,11 +25,12 @@ print("Total edges:", len(edges))
 for e in edges[:10]:
     print(e)
 
-# ---- Adjacency matrix (counts during construction) ----
-adj_matrix = pd.DataFrame(0, index=nodes, columns=nodes)
+# ---- Unweighted adjacency matrix ----
+adj_matrix = pd.DataFrame(0, index=nodes, columns=nodes, dtype=int)
+
 for start, end in edges:
-    adj_matrix.loc[start, end] += 1
-    adj_matrix.loc[end, start] += 1
+    adj_matrix.loc[start, end] = 1
+    adj_matrix.loc[end, start] = 1
 
 print(adj_matrix.head())
 
@@ -38,7 +40,7 @@ edges_df = pd.DataFrame(edges, columns=["source", "target"])
 
 edges_df.to_csv("edges.csv", index=False)
 nodes_df.to_csv("nodes.csv", index=False)
-adj_matrix.to_csv("adjacency_matrix.csv", index=True)
+adj_matrix.to_csv("adjacency_matrix.csv", index=False)
 
 # ---- Largest connected component (LCC) ----
 A = adj_matrix.to_numpy()
@@ -66,12 +68,12 @@ for u, v in edges_lcc_named:
 pis_lcc_df = pd.DataFrame(sorted(unique_pis_lcc), columns=["PI Names"])
 pis_lcc_df.to_csv("nodes_largest_component.csv", index=False)
 
-# ---- Adjacency matrix for LCC ----
+# ---- Unweighted adjacency matrix for LCC ----
 nodes_lcc = sorted(unique_pis_lcc)
-adj_matrix_lcc = pd.DataFrame(0, index=nodes_lcc, columns=nodes_lcc)
+adj_matrix_lcc = pd.DataFrame(0, index=nodes_lcc, columns=nodes_lcc, dtype=int)
 
 for start, end in edges_lcc_named:
-    adj_matrix_lcc.loc[start, end] += 1
-    adj_matrix_lcc.loc[end, start] += 1
+    adj_matrix_lcc.loc[start, end] = 1
+    adj_matrix_lcc.loc[end, start] = 1
 
-adj_matrix_lcc.to_csv("adjacency_matrix_largest_component.csv", index=True)
+adj_matrix_lcc.to_csv("adjacency_matrix_largest_component.csv", index=False)
