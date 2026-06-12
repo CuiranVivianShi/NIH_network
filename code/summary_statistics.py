@@ -30,7 +30,7 @@ comma_fmt = FuncFormatter(lambda x, _: f"{int(x):,}")
 # 1) Load and prepare data
 # ============================================================
 combined_df = pd.read_csv("combined_df.csv", low_memory=False)
-all_unique_pis = pd.read_csv("data/nodes.csv")
+all_unique_pis = pd.read_csv("nodes.csv")
 
 # Unique project at grant-year level
 df = combined_df.drop_duplicates(subset="Project Number", keep="first").copy()
@@ -41,6 +41,11 @@ df["Organization Name"] = df["Organization Name"].fillna("Unknown").astype(str).
 df["Department"] = df["Department"].fillna("Unknown Department").astype(str).str.strip()
 df["Organization Country"] = df["Organization Country"].fillna("Unknown").astype(str).str.strip()
 df["Total Cost"] = pd.to_numeric(df["Total Cost"], errors="coerce")
+
+total_grants = df["Project Number"].nunique()
+total_pis = all_unique_pis["PI Names"].nunique()
+n_orgs = df["Organization Name"].nunique()
+n_countries = df["Organization Country"].nunique()
 
 # Clean fiscal year
 df["Fiscal Year"] = df["Fiscal Year"].astype(str)
@@ -72,13 +77,8 @@ n_ic = df[ic_col].nunique() if ic_col is not None else np.nan
 # ============================================================
 # 3) Summary metrics for manuscript Table 1
 # ============================================================
-total_grants = df["Project Number"].nunique()
-total_pis = all_unique_pis["PI Names"].nunique()
-n_orgs = df["Organization Name"].nunique()
-n_countries = df["Organization Country"].nunique()
 fy_min = df["Fiscal Year"].min()
 fy_max = df["Fiscal Year"].max()
-
 total_funding = funding_df["Total Cost"].sum()
 median_funding = funding_df["Total Cost"].median()
 q1_funding = funding_df["Total Cost"].quantile(0.25)
