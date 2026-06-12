@@ -4,12 +4,8 @@ This repository contains code and data for constructing the NIH multiple princip
 
 ## Data
 
-The processed grant-level and PI-level datasets are available at:
+The processed grant-level dataset, PI-level dataset, and the corresponding network objects are available at:
 https://huggingface.co/datasets/LiLabUNC/NIH-MPINet
-
-Raw datasets are located in the `data/` folder, including:
-- NIH RePORTER exported datasets
-- adjacency matrix, node list, and edge list for the full data and the largest connected component
 
 ## Code description
 
