@@ -32,7 +32,7 @@ comma_fmt = FuncFormatter(lambda x, _: f"{int(x):,}")
 combined_df = pd.read_csv("combined_df.csv", low_memory=False)
 all_unique_pis = pd.read_csv("data/nodes.csv")
 
-# One row per unique project
+# Unique project at grant-year level
 df = combined_df.drop_duplicates(subset="Project Number", keep="first").copy()
 
 # Clean columns
