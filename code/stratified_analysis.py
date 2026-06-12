@@ -15,9 +15,9 @@ from topic_modeling_nih_Bertopic import preprocess_text
 
 
 # Load the adjacency matrix data
-data1 = pd.read_csv('/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/10year_2006-2015/adjacent_matrix_largest_component_2006-2015.csv')
-data2 = pd.read_csv('/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2016-2020/adjacent_matrix_largest_component_2016-2020.csv')
-data3 = pd.read_csv('/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2021-2023/adjacent_matrix_largest_component_2021-2023.csv')
+data1 = pd.read_csv('data_stratified_by_5_year/10year_2006-2015/adjacent_matrix_largest_component_2006-2015.csv')
+data2 = pd.read_csv('data_stratified_by_5_year/5year_2016-2020/adjacent_matrix_largest_component_2016-2020.csv')
+data3 = pd.read_csv('data_stratified_by_5_year/5year_2021-2023/adjacent_matrix_largest_component_2021-2023.csv')
 A1 = data1.to_numpy()
 A2 = data2.to_numpy()
 A3 = data3.to_numpy()
