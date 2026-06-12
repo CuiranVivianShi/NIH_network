@@ -7,13 +7,14 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 
 
-
 """
 Section 1
 find clusters based on adjacency matrix
 """
+
 # Load the adjacency matrix data
-data = pd.read_csv('data/adjacency_matrix_largest_component.csv')
+data = pd.read_csv('adjacency_matrix_largest_component.csv')
+
 A = data.to_numpy()
 A_square = A[:, 1:]  # Exclude the first column
 PI_names = data.columns[1:]  # The first column contains labels which are PI names
@@ -197,6 +198,8 @@ cluster_df.rename(columns={'Node_Label': 'id'}, inplace=True)
 cluster_df.to_csv('final_node_data.csv', index=False)
 
 
+
+
 """
 Section 2
 Merge the clusters with the complete dataset to find the grants in each cluster
@@ -252,118 +255,136 @@ print(cluster_1_matches)
 Section 3
 Summary Statistics for each cluster
 """
-# Count the frequency of each keyword in NIH Spending Categorization
-keywords = all_matches[1]['NIH Spending Categorization'].str.split(';').explode()
-keyword_counts = keywords.value_counts()
-print(keyword_counts.head(10))
 
+# Dictionaries to store results
+top_10_nodes_per_cluster = {}
+cluster_nodes = {}
+cluster_edges = {}
 
-from wordcloud import WordCloud
-import matplotlib.pyplot as plt
+# Tables to save
+cluster_summary = []
+top_10_rows = []
 
-# Setup the figure and axes for the first 10 clusters
-fig1, axs1 = plt.subplots(2, 5, figsize=(20, 8))  # 2 rows and 5 columns
-fig1.subplots_adjust(hspace=0.05, wspace=0.1)
-fig1.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0.05, hspace=0.05)
-fig1.tight_layout(pad=0)  # Eliminate padding around subplots
+for cluster_index in range(num_clusters):
 
+    # -----------------------------
+    # Retrieve subgraph for cluster
+    # -----------------------------
+    members = [
+        index
+        for index, cluster_id in enumerate(clusters)
+        if cluster_id == cluster_index
+    ]
 
-# Setup the figure and axes for the remaining 9 clusters
-#fig2, axs2 = plt.subplots(2, 5, figsize=(20, 8), subplot_kw={'xticks': [], 'yticks': []})  # 2 rows and 5 columns
-fig2, axs2 = plt.subplots(2, 5, figsize=(20, 8))  # 2 rows and 5 columns
-fig2.subplots_adjust(hspace=0.05, wspace=0.1)
-fig2.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0.05, hspace=0.05)
-fig2.tight_layout(pad=0)  # Eliminate padding around subplots
+    subgraph = graph.subgraph(members)
 
+    # -----------------------------
+    # Nodes and edges
+    # -----------------------------
+    nodes_labels = subgraph.vs["label"]
+    n_nodes = subgraph.vcount()
+    n_edges = subgraph.ecount()
 
-# Ensure each subplot axis in fig2 is turned off if not used
-for ax in axs2.flatten()[9:]:
-    ax.axis('off')
+    cluster_nodes[cluster_index] = list(nodes_labels)
 
-for cluster_index in range(19):  # Assuming there are 19 clusters indexed from 0 to 18
-    if cluster_index in all_matches:
-        keywords = all_matches[cluster_index]['NIH Spending Categorization'].str.split(';').explode()
-        keywords = keywords[keywords != "No NIH Category available"]
-        keyword_counts = keywords.value_counts()
+    # Edge list for this cluster
+    edge_list = []
+    for edge in subgraph.es:
+        source = nodes_labels[edge.source]
+        target = nodes_labels[edge.target]
+        edge_list.append((source, target))
 
-        # Generate the word cloud for the current cluster
-        wordcloud = WordCloud(width=1600, height=1600, background_color='white').generate_from_frequencies(keyword_counts)
+    cluster_edges[cluster_index] = edge_list
 
-        # Choose the figure and subplot to plot to
-        if cluster_index < 10:
-            ax = axs1[cluster_index // 5, cluster_index % 5]  # Calculate subplot index
-            fig = fig1
-        else:
-            ax = axs2[(cluster_index - 10) // 5, (cluster_index - 10) % 5]  # Adjust index for second figure
-            fig = fig2
+    # -----------------------------
+    # Degrees
+    # -----------------------------
+    degrees = subgraph.degree()
+    degrees_array = np.array(degrees)
 
-        ax.imshow(wordcloud, interpolation='bilinear')
-        ax.axis("off")
-        ax.set_title(f"Cluster {cluster_index + 1}")
+    # Average node degree
+    avg_degree = np.mean(degrees_array) if n_nodes > 0 else 0
 
-# Save the figures
-fig1.savefig('/Users/shicuiran/PycharmProjects/NIH_network/wordcloud/wordclouds1_SpendingCategory.png') #first 10 clusters
-fig2.savefig('/Users/shicuiran/PycharmProjects/NIH_network/wordcloud/wordclouds2_SpendingCategory.png') #remaining 9 clusters
+    # z-score normalized degree: (degree - mean) / std
+    mean_deg = np.mean(degrees_array) if n_nodes > 0 else 0
+    std_deg = np.std(degrees_array) if n_nodes > 0 else 0
 
+    if std_deg == 0:
+        normalized_degrees = np.zeros_like(degrees_array, dtype=float)
+    else:
+        normalized_degrees = (degrees_array - mean_deg) / std_deg
 
+    # -----------------------------
+    # Save cluster summary
+    # -----------------------------
+    cluster_summary.append({
+        "Cluster": cluster_index + 1,
+        "Number of Nodes": n_nodes,
+        "Number of Edges": n_edges,
+        "Average Node Degree": round(avg_degree, 2)
+    })
 
+    # -----------------------------
+    # Top 10 representative nodes
+    # -----------------------------
+    node_degree_pairs = list(
+        zip(nodes_labels, degrees_array, normalized_degrees)
+    )
 
-# Count the frequency of each keyword in Project Terms
-# Step 1: Track clusters for each keyword
-keyword_clusters = defaultdict(set)  # Dictionary to keep track of clusters each keyword appears in
-for cluster_index, cluster_df in all_matches.items():
-    keywords = cluster_df['Project Terms'].str.split(';').explode()
-    for keyword in keywords.dropna().unique():  # Process each unique keyword
-        keyword_clusters[keyword].add(cluster_index)
-# Step 2: Identify keywords that appear in 15 or more different clusters
-common_keywords = {keyword for keyword, clusters in keyword_clusters.items() if len(clusters) >= 10}
-# Step 3: Count keywords for each cluster, excluding common keywords
-cluster_keyword_frequencies = {}
-for cluster_index, cluster_df in all_matches.items():
-    keywords = cluster_df['Project Terms'].str.split(';').explode()
-    filtered_keywords = keywords[~keywords.isin(common_keywords)]
-    # Count the frequency of the remaining keywords
-    keyword_counts = filtered_keywords.value_counts()
-    # Store the counts in a dictionary
-    cluster_keyword_frequencies[cluster_index] = keyword_counts
-    # Optionally print the keyword frequencies for each cluster
-    print(f"Keyword frequencies for Cluster {cluster_index + 1}:")
-    print(cluster_keyword_frequencies[cluster_index].head(10))
+    node_degree_pairs_sorted = sorted(
+        node_degree_pairs,
+        key=lambda x: x[2],
+        reverse=True
+    )
+
+    top_10_nodes = node_degree_pairs_sorted[:10]
+    top_10_nodes_per_cluster[cluster_index] = top_10_nodes
+
+    for node, raw_deg, norm_deg in top_10_nodes:
+        top_10_rows.append({
+            "Cluster": cluster_index + 1,
+            "PI": node,
+            "Raw Degree": int(raw_deg),
+            "Normalized Degree": round(norm_deg, 2)
+        })
+
+    # Print results
+    print(f"Cluster {cluster_index + 1}:")
+    print(f"  Number of nodes: {n_nodes}")
+    print(f"  Number of edges: {n_edges}")
+    print(f"  Average node degree: {avg_degree:.2f}")
+    print("  Top 10 representative PIs:")
+    for node, raw_deg, norm_deg in top_10_nodes:
+        print(
+            f"    {node} - Raw degree: {raw_deg}, "
+            f"Normalized degree: {norm_deg:.2f}"
+        )
     print("\n")
-# Retrieve and print the keyword counts for Cluster 1
-cluster_1_keyword_counts = cluster_keyword_frequencies[0]  # Assuming cluster indices start at 0
-print("Top 10 Keywords for Cluster 1 after filtering common terms:")
-print(cluster_1_keyword_counts.head(10))
 
 
-# Ensure each subplot axis in fig2 is turned off if not used
-for ax in axs2.flatten()[9:]:
-    ax.axis('off')
+# -----------------------------
+# Convert to DataFrames
+# -----------------------------
+cluster_summary_df = pd.DataFrame(cluster_summary)
+top_10_nodes_df = pd.DataFrame(top_10_rows)
 
-# Loop through each cluster to create word clouds
-for cluster_index in range(19):  # Assuming there are 19 clusters indexed from 0 to 18
-    if cluster_index in cluster_keyword_frequencies:
-        keyword_counts = cluster_keyword_frequencies[cluster_index]
+print("Cluster summary:")
+print(cluster_summary_df)
 
-        # Generate the word cloud for the current cluster
-        wordcloud = WordCloud(width=800, height=800, background_color='white').generate_from_frequencies(keyword_counts)
+print("Top 10 nodes per cluster:")
+print(top_10_nodes_df)
 
-        # Choose the figure and subplot to plot to
-        if cluster_index < 10:
-            ax = axs1[cluster_index // 5, cluster_index % 5]
-            fig = fig1
-        else:
-            ax = axs2[(cluster_index - 10) // 5, (cluster_index - 10) % 5]
-            fig = fig2
 
-        ax.imshow(wordcloud, interpolation='bilinear')
-        ax.axis("off")
-        ax.set_title(f"Cluster {cluster_index + 1}")
+# -----------------------------
+# Save summary tables
+# -----------------------------
+cluster_summary_df.to_csv(
+    "cluster_summary_zscore_normalized_degree.csv",
+    index=False
+)
 
-# Save the figures
-fig1.tight_layout(pad=0)  # Ensure there is minimal padding and no overlapping
-fig1.savefig('/Users/shicuiran/PycharmProjects/NIH_network/wordcloud/wordclouds1_ProjectTerm.png')
-
-fig2.tight_layout(pad=0)
-fig2.savefig('/Users/shicuiran/PycharmProjects/NIH_network/wordcloud/wordclouds2_ProjectTerm.png')
+top_10_nodes_df.to_csv(
+    "cluster_top10_representative_pis_zscore_normalized_degree.csv",
+    index=False
+)
 
