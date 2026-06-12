@@ -5,7 +5,7 @@ import urllib.parse
 import pandas as pd
 import time
 
-a = pd.read_csv("data/PI_Info.csv")
+a = pd.read_csv("PI_Info.csv")
 all_unique_pis_list = list(a['PI Name'])
 
 def get_pi_department(pi_name):
