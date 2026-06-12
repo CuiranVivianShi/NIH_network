@@ -1,104 +1,59 @@
 import pandas as pd
+import re
 
-# ---- Read datasets ----
-data_2006 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2006-2010/SearchResult_Export_2006.csv",
-    skiprows=6
-)
-data_2007 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2006-2010/SearchResult_Export_2007.csv",
-    skiprows=6
-)
-data_2008 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2006-2010/SearchResult_Export_2008.csv",
-    skiprows=6
-)
-data_2009 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2006-2010/SearchResult_Export_2009.csv",
-    skiprows=6
-)
-data_2010 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2006-2010/SearchResult_Export_2010.csv",
-    skiprows=6
-)
 
-data_2011 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2011-2015/SearchResult_Export_2011.csv",
-    skiprows=6
-)
-data_2012 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2011-2015/SearchResult_Export_2012.csv",
-    skiprows=6
-)
-data_2013 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2011-2015/SearchResult_Export_2013.csv",
-    skiprows=6
-)
-data_2014 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2011-2015/SearchResult_Export_2014.csv",
-    skiprows=6
-)
-data_2015 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2011-2015/SearchResult_Export_2015.csv",
-    skiprows=6
-)
+# ---- Read dataset ----
+combined_df = pd.read_csv("combined_df.csv", low_memory=False)
 
-data_2016 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2016-2020/SearchResult_Export_2016.csv",
-    skiprows=6
-)
-data_2017 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2016-2020/SearchResult_Export_2017.csv",
-    skiprows=6
-)
-data_2018 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2016-2020/SearchResult_Export_2018.csv",
-    skiprows=6
-)
-data_2019 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2016-2020/SearchResult_Export_2019.csv",
-    skiprows=6
-)
-data_2020 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2016-2020/SearchResult_Export_2020.csv",
-    skiprows=6
-)
 
-data_2021 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2021-2023/SearchResult_Export_2021.csv",
-    skiprows=6
-)
-data_2022 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2021-2023/SearchResult_Export_2022.csv",
-    skiprows=6
-)
-data_2023 = pd.read_csv(
-    "/Users/shicuiran/PycharmProjects/NIH_network/data_stratified_by_5_year/5year_2021-2023/SearchResult_Export_2023.csv",
-    skiprows=6
-)
+# ---- Core project number (combine projects) ----
+def extract_core_project_number(project_number):
+    if pd.isna(project_number):
+        return None
 
-# ---- Combine datasets ----
-dfs = [
-    data_2006, data_2007, data_2008, data_2009, data_2010,
-    data_2011, data_2012, data_2013, data_2014, data_2015,
-    data_2016, data_2017, data_2018, data_2019, data_2020,
-    data_2021, data_2022, data_2023
-]
+    project_number = str(project_number).strip()
 
-combined_df = pd.concat(dfs, ignore_index=True)
+    # Remove support year suffix, e.g. -01, -02, -05S1
+    project_number = re.sub(r"-\d{2}.*$", "", project_number)
+
+    # Remove leading application type digit, e.g. 1R01..., 7R01..., 3U01...
+    project_number = re.sub(r"^\d", "", project_number)
+
+    return project_number
+
+
+combined_df["Project Number"] = combined_df["Project Number"].astype(str).str.strip()
+
+combined_df["Core Project Number"] = combined_df["Project Number"].apply(
+    extract_core_project_number
+)
 
 # ---- Project counts ----
-n_projects = combined_df["Project Number"].nunique()
-print(n_projects)
+n_grant_records = combined_df["Project Number"].nunique()
+n_core_projects = combined_df["Core Project Number"].nunique()
 
-# reduce to one row per unique Project Number
-combined_df_unique = combined_df.drop_duplicates(subset='Project Number', keep='first')
-combined_df_unique['Project Number'].nunique() #86,743
+print("Number of unique grant records:", n_grant_records)
+print("Number of unique core projects:", n_core_projects)
+
+# Reduce to one row per unique grant record
+combined_df_unique_records = combined_df.drop_duplicates(
+    subset="Project Number",
+    keep="first"
+).copy()
+
+# Reduce to one row per underlying core project
+combined_df_unique_projects = combined_df.drop_duplicates(
+    subset="Core Project Number",
+    keep="first"
+).copy()
+
+print("Unique grant records:", combined_df_unique_records["Project Number"].nunique())
+print("Unique core projects:", combined_df_unique_projects["Core Project Number"].nunique())
 
 # ---- Co-PI counts ----
 other_pis = combined_df["Other PI or Project Leader(s)"].fillna("").astype(str)
 total_co_pis = (other_pis.ne("") * (other_pis.str.count(";") + 1)).sum()
-print("Total number of co-PIs in the dataset:", int(total_co_pis))  # 61176
+print("Total number of co-PIs in the dataset:", int(total_co_pis))
 
 # ---- Unique PI names ----
 pis = combined_df["Contact PI / Project Leader"].dropna().str.split(";")
@@ -111,10 +66,15 @@ all_unique_pis = set(pis_list + co_pis_list)
 print("Total number of unique PIs and Co-PIs combined:", len(all_unique_pis))
 
 pi_df = pd.DataFrame(sorted(all_unique_pis), columns=["PI Names"])
+
+
 # pi_df.to_csv("all_unique_pis.csv", index=False)
 
 def get_combined_df():
     return combined_df.copy()
 
+
 def get_unique_pis():
     return set(all_unique_pis)
+
+
